@@ -512,8 +512,8 @@ function prepareImage {
 
 function prepareAll {
     installSoft
-    prepareNetwork
     prepareImage
+    prepareNetwork
 };
 
 
@@ -576,6 +576,7 @@ if [ !$1 ]; then
     echo "
     Use script with parametrs:
 
+    --prepareImage        Prepare image for PXE (use with --isourl or with --isofile)
     --isourl <url>        Set url
     --isofile <file>      Set iso file
     --prepareSoft         Install necessery software
@@ -586,6 +587,5 @@ if [ !$1 ]; then
     --prepareFtpd         Configure FTP server
     --prepareHttpd        Configure HTTP server
     --prepareNetwork      Configure all (DHCP,TFTP,NFS,FTP,HTTP,Firewall)
-    --prepareImage        Prepare image for PXE (use with --isourl or with --isofile)
     ";
 fi
