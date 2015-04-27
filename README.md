@@ -4,7 +4,7 @@ Setup a Kickstart/PXE/DHCP server for Centos
 # Options:
 
 ## --prepareImage
-Prepare image for PXE (use with --isourl or with --isofile).  Use this option when necessary create a copy of the ISO image on hard disk to install Centos over the network. This option will copy the files to the ISO image in /tftpboot/centos<br> 
+Prepare image for PXE (use with --isourl or with --isofile).  Use this option when necessary create a copy of the ISO image on hard disk to install Centos over the network. This option will copy the files from the ISO image to /tftpboot/centos<br> 
 The following two options point out where to get the ISO image:<br>
 
 ##  --isourl <url>
