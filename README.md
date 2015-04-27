@@ -13,7 +13,7 @@ Download the image from the Internet<br>
 ##  --isofile <file>
 Specify the path to the image on hard drive <br>
 
-###Examples
+###Examples:
 ```
 #./bash_install.sh --prepareImage --isourl http://mirror.corbina.net/pub/Linux/centos/7/isos/x86_64/CentOS-7-x86_64-Minimal-1503-01.iso
 or
