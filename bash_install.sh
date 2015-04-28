@@ -500,6 +500,16 @@ function prepareNetwork {
 
 function prepareImage {
     echo "Preparing installation image."
+    if [ ! -z "$filePath" ]; then
+      dtype=`echo \"$filePath\" | awk '{split($0,a,":"); print toupper(a[1])}'|sed 's/"//'`
+      if [[ $dtype == "HTTP" || $dtype == "HTTPS" || $dtype == "FTP" ]]; then
+        echo "url!"
+        isoUrl=$filePath
+      else
+        echo "Path!"
+	isoFile=$filePath
+      fi
+    fi
     if [[ -z "$isoFile" ]]; then 
 	echo -n "Donwload Centos 7 image from $isoUrl? (YN)[N]: "
 	read yn
@@ -563,7 +573,7 @@ if [ $# -eq "0" ]; then
     --prepareDhcp                   Configure DHCP server
     --prepareTftp                   Configure TFTP server
     --prepareFw                     Prepare firewall
-    --enableNfs                     Configure NFS server
+    --prepareNfs                     Configure NFS server
     --prepareFtpd                   Configure FTP server
     --prepareHttpd                  Configure HTTP server
     --prepareNetwork                Configure all (DHCP,TFTP,NFS,FTP,HTTP,Firewall)
@@ -571,59 +581,48 @@ if [ $# -eq "0" ]; then
     #exit;
 fi
 
-
 while test $# -gt 0
 do
-    case $1 in
+    param1=`echo $1 |awk '{split(\$0,a,"=");print a[1]}'`
+    param2=`echo $1 |awk '{split(\$0,a,"=");print a[2]}'`
+    case $param1 in
         --prepareSoft)
             installSoft;
             shift
             ;;
-	--prepareDhcp)
-	    prepareDhcp;
+        --prepareDhcp)
+            prepareDhcp;
             shift
             ;;
-	--prepareTftp)
-	    prepareTftp;
+        --prepareTftp)
+            prepareTftp
             shift
             ;;
-	--prepareFw)
+        --prepareFw)
             prepareFw;
             shift
             ;;
-	--enableNfs)
-            enableNfs;
+        --prepareNfs)
+            prepareNfs;
             shift
             ;;
-	--prepareFtpd)
-            prepareFtpd;
+        --prepareFtpd)
+            prepareTf3tp
             shift
             ;;
-	--prepareHttpd)
+        --prepareHttpd)
             prepareHttpd;
             shift
             ;;
-	--prepareNetwork)
-    	    echo "kuku"
+        --prepareNetwork)
             prepareNetwork;
-    	    shift
-    	    ;;
-    	--prepareImage)
-    	    if [ ! -z "$2" ]; then 
-              checkrc=`echo \"$2\"|grep '\-\-' -c`
-               if [ $checkrc -eq "0" ]; then
-	        dtype=`echo \"$2\" | awk '{split($0,a,":"); print toupper(a[1])}'|sed 's/"//'`
-	        if [[ $dtype == "HTTP" || $dtype == "HTTPS" || $dtype == "FTP" ]]; then
-                  isoUrl=$2
-                else
-                  isoUrl="";
-                  isoFile=$2
-                fi
-              fi
-            fi
-            prepareImage; 
             shift
-    	    ;;
+            ;;
+        --prepareImage)
+            filePath=$param2;
+            prepareImage;
+            shift
+            ;;
         *)
             echo >&2 "Invalid argument: $1"
             ;;
