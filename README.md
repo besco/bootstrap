@@ -9,7 +9,7 @@ By default iso-image will downloaded from: http://mirror.corbina.net/pub/Linux/c
 
 ###Examples:
 ```
-#./bash_install.sh --prepareImage= http://mirror.corbina.net/pub/Linux/centos/7/isos/x86_64/CentOS-7-x86_64-Minimal-1503-01.iso
+#./bash_install.sh --prepareImage=http://mirror.corbina.net/pub/Linux/centos/7/isos/x86_64/CentOS-7-x86_64-Minimal-1503-01.iso
 or
 #./bash_install.sh --prepareImage=/tmp/downloads/CentOS-7-x86_64-Minimal-1503-01.iso
 ```
