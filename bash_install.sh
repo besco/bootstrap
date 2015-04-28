@@ -28,6 +28,22 @@ function installSoft {
     done
 }
 
+function createDirs {
+
+    nDirs=("$tftp_root" "$tftp_root/centos" "$tftp_root/pxelinux.cfg" "$tftp_root/netboot/centos/7/x86_64");
+    for index in ${!nDirs[*]}
+    do
+      if [ ! -d "${nDirs[$index]}" ]; then
+        echo "Directory ${nDirs[$index]} doesn't exist. Creating...";
+        mkdir -p ${nDirs[$index]}
+      else 
+        echo "Directory ${nDirs[$index]} exist. Skiping...";
+      fi
+    done
+    chmod -R 777 $tftp_root
+}
+
+
 function GiveMeBackMyEth {
     status=0;
     echo "Checking for changes in system for names of the interfaces";
@@ -45,13 +61,8 @@ function GiveMeBackMyEth {
 function prepareDhcp {
     echo "Creating config for DHCP server";
     echo "";
-    echo "Creating $tftp_root";
-    mkdir -p $tftp_root
-    chmod 777 $tftp_root
-    echo "Preparing PXE files"
-    mkdir -p $tftp_root/pxelinux.cfg
-    mkdir -p $tftp_root/netboot/centos/7/x86_64
-
+    echo "Check directories:"
+    createDirs;
     eth_arr=(`ifconfig|grep flags|awk '{split ($1,a,":"); print a[1]}'|xargs`)
     echo "On what interface DHCP must listen to?";
     echo "Fount ${#eth_arr[@]} interfaces.";
@@ -177,7 +188,7 @@ kexec-tools
 
 %end
 EOF
-    mkdir -p $tftp_boot/centos
+
     backup_ext=`date +%m-%d-%Y" "%H:%M:%S`;
     rc=`cp /etc/dhcp/dhcpd.conf "/etc/dhcp/dhcpd.conf-$backup_ext"`;
 
@@ -212,13 +223,14 @@ EOF
     `systemctl enable dhcpd`
     `systemctl restart dhcpd`
     echo "DHCP configuration complete.";
-    echo "$tftp_root $network/255.255.255.0(ro)" >>/etc/exports
 }
 
 function prepareTftp {
     echo "Setting up TFTP server and prepare tftproot directory";
     echo "";
-
+    echo "Checking directories:"
+    createDirs;
+    installSoft;
     backup_ext=`date +%m-%d-%Y" "%H:%M:%S`;
     rc=`cp /etc/xinetd.d/tftp "/etc/xinetd.d/tftp-$backup_ext"`;
 
@@ -238,26 +250,24 @@ service tftp
 	flags			= IPv4
 }
 EOF
-
-    echo "Creating $tftp_root";
-    mkdir -p $tftp_root
-    chmod 777 $tftp_root
-    echo "Preparing PXE files"
-    mkdir -p $tftp_root/pxelinux.cfg
-    mkdir -p $tftp_root/netboot/centos/7/x86_64
-
     
     echo "Preparing directory";
     cp /usr/share/syslinux/{pxelinux.0,menu.c32,memdisk,mboot.c32,chain.c32} $tftp_root
-#    cp /usr/share/syslinux/menu.c32 $tftp_root
-#    cp /usr/share/syslinux/memdisk $tftp_root
-#    cp /usr/share/syslinux/mboot.c32 $tftp_root
-#    cp /usr/share/syslinux/chain.c32 $tftp_root
-  
-    echo "Downloading initrd.img"
-    wget -q --directory-prefix=$tftp_root/netboot/centos/7/x86_64 -c ftp://ftp.ines.lug.ro/centos/7/os/x86_64/images/pxeboot/initrd.img
-    echo "Downloading vmlinuz"
-    wget -q --directory-prefix=$tftp_root/netboot/centos/7/x86_64 -c ftp://ftp.ines.lug.ro/centos/7/os/x86_64/images/pxeboot/vmlinuz
+    if [ ! -f "$tftp_root/netboot/centos/7/x86_64/initrd.img" ]; then
+ 
+    echo "Check for initrd.img"
+      echo "Initrd file doesn't exists. Downloading..."
+      wget -q --directory-prefix=$tftp_root/netboot/centos/7/x86_64 -c ftp://ftp.ines.lug.ro/centos/7/os/x86_64/images/pxeboot/initrd.img
+    else 
+      echo "Initrd exist."
+    fi
+    echo "Check for vmlinuz"
+    if [ ! -f "$tftp_root/netboot/centos/7/x86_64/vmlinuz" ]; then
+      echo "Vmlinuz file doesn't exist. Downloading..."
+      wget -q --directory-prefix=$tftp_root/netboot/centos/7/x86_64 -c ftp://ftp.ines.lug.ro/centos/7/os/x86_64/images/pxeboot/vmlinuz
+    else
+      echo "Vmlinuz exists."
+    fi
     systemctl enable xinetd
     systemctl restart xinetd
     echo "Preparing TFTP complete"
@@ -274,6 +284,7 @@ function disableSelinux {
 	`sed -i 's/=enforcing/=disabled/;s/=permissive/=disabled/' /etc/selinux/config`;
 	echo "SElinux disabled. You must reboot server"
     fi
+    setenforce 0
 };
 
 function disableFirewalld {
@@ -290,9 +301,13 @@ function disableFirewalld {
 
 function enableNfs {
     echo "Enabling NFS";
-    rc=`cat /etc/exports|grep -w $tftp_root`;
-    if [ $rc -ne 0 ]; then 
+    installSoft;
+    rc=`cat /etc/exports|grep -w $tftp_root -c`
+    if [ $rc -ne "0" ]; then 
+	echo "Add access to centos via nfs"
 	echo "/$tftp_root		*(ro,sync,no_root_squash,no_all_squash)" >>/etc/exports
+    else
+	echo "NFS dir already configured"
     fi
 
     rc=`systemctl enable rpcbind`
@@ -327,6 +342,7 @@ function enableNfs {
 
 function prepareFtpd {
     echo "Enabling vsftpd"
+    installSoft;
     backup_ext=`date +%m-%d-%Y" "%H:%M:%S`;
     rc=`cp /etc/vsftpd/vsftpd.conf "/etc/vsftpd/vsftpd.conf-$backup_ext"`;
 
@@ -355,6 +371,7 @@ EOF
 
 function prepareHttpd {
     echo "Enabling httpd"
+    installSoft;
     backup_ext=`date +%m-%d-%Y" "%H:%M:%S`;
     rc=`cp /etc/httpd/conf/httpd.conf "/etc/httpd/conf/httpd.conf-$backup_ext"`;
     if [ -f /etc/httpd/conf.d/welcome.conf ]; then 
@@ -535,7 +552,6 @@ function prepareAll {
 };
 
 
-
 if [ $# -eq "0" ]; then
     echo "
     Use $0 script with parametrs:
@@ -592,16 +608,16 @@ do
     	    shift
     	    ;;
     	--prepareImage)
-            checkrc=`echo \"$2\"|grep '\-\-' -c`
-            echo $checkrc
-             if [ $checkrc -eq "0" ]; then
-	      dtype=`echo \"$2\" | awk '{split($0,a,":"); print toupper(a[1])}'|sed 's/"//'`
-	      if [[ $dtype == "HTTP" || $dtype == "HTTPS" || $dtype == "FTP" ]]; then
-                isoUrl=$2
-              else
-                echo "$dtype" 
-                isoUrl="";
-                isoFile=$2
+    	    if [ ! -z "$2" ]; then 
+              checkrc=`echo \"$2\"|grep '\-\-' -c`
+               if [ $checkrc -eq "0" ]; then
+	        dtype=`echo \"$2\" | awk '{split($0,a,":"); print toupper(a[1])}'|sed 's/"//'`
+	        if [[ $dtype == "HTTP" || $dtype == "HTTPS" || $dtype == "FTP" ]]; then
+                  isoUrl=$2
+                else
+                  isoUrl="";
+                  isoFile=$2
+                fi
               fi
             fi
             prepareImage; 
@@ -613,4 +629,3 @@ do
     esac
     shift
 done
-
