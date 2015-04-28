@@ -499,6 +499,7 @@ function prepareNetwork {
 
 function prepareImage {
     echo "Preparing installation image."
+    createDirs;
     if [ ! -z "$filePath" ]; then
       dtype=`echo \"$filePath\" | awk '{split($0,a,":"); print toupper(a[1])}'|sed 's/"//'`
       if [[ $dtype == "HTTP" || $dtype == "HTTPS" || $dtype == "FTP" ]]; then
