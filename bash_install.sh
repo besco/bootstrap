@@ -5,9 +5,10 @@ isoUrl="http://mirror.corbina.net/pub/Linux/centos/7/isos/x86_64/CentOS-7-x86_64
 tftp_root="/tftpboot";
 isoFile="";
 
+
 function installSoft {
     # The necessary software
-    nSoft=("dhcp" "vsftpd" "httpd" "syslinux" "tftp" "tftp-server" "vim-enhanced" "wget" "nfs-utils");
+    nSoft=("dhcp" "vsftpd" "httpd" "syslinux" "tftp" "tftp-server" "vim-enhanced" "wget" "nfs-utils" "net-tools");
 
     for index in ${!nSoft[*]}
     do
@@ -44,6 +45,13 @@ function GiveMeBackMyEth {
 function prepareDhcp {
     echo "Creating config for DHCP server";
     echo "";
+    echo "Creating $tftp_root";
+    mkdir -p $tftp_root
+    chmod 777 $tftp_root
+    echo "Preparing PXE files"
+    mkdir -p $tftp_root/pxelinux.cfg
+    mkdir -p $tftp_root/netboot/centos/7/x86_64
+
     eth_arr=(`ifconfig|grep flags|awk '{split ($1,a,":"); print a[1]}'|xargs`)
     echo "On what interface DHCP must listen to?";
     echo "Fount ${#eth_arr[@]} interfaces.";
@@ -53,7 +61,7 @@ function prepareDhcp {
     done
     echo -n "On what interface DHCP must listen to? [1]: ";
     read int_num
-    if [ !$int_num ]; then
+    if [ -z "$int_num" ]; then
 	int_num=1;
     fi
     int_ip=`ifconfig ${eth_arr[$int_num]} |grep -w inet|awk '{print $2}'`
@@ -61,52 +69,52 @@ function prepareDhcp {
 
     echo -n "Enter PXE server ip [$int_ip]: "
     read server_ip
-    if [ !$server_ip ]; then
+    if [ -z "$server_ip" ]; then
 	server_ip=$int_ip
     fi
     network=`echo $server_ip|awk '{split($1,a,"."); print a[1]"."a[2]"."a[3]".0"}'`;
     echo -n "Enter netmask [255.255.255.0]: "
     read netmask_nm;
-    if [ !$netmask_nm ]; then
+    if [ -z "$netmask_nm" ]; then
 	netmask_nm="255.255.255.0"
     fi
 
     echo -n "Enter network domain [localdomain]: "
     read network_dn
-    if [ !$network_dn ]; then 
+    if [ -z "$network_dn" ]; then 
 	network_dn="localdomain"
     fi
     
     echo -n "Enter DNS ip[$server_ip]: "
     read dns_ip
-    if [ !$dns_ip ]; then
+    if [ -z "$dns_ip" ]; then
 	dns_ip=$server_ip
     fi    
     
     echo -n "Enter gateway ip [$server_ip]: "
     read gateway_ip
-    if [ !$gateway_ip ]; then
+    if [ -z "$gateway_ip" ]; then
 	gateway_ip=$server_ip
     fi
     auto_first_ip=`echo $server_ip|awk '{split($1,a,"."); print a[1]"."a[2]"."a[3]".10"}'`;
     
     echo -n "Enter first ip of range [$auto_first_ip]: "
     read first_ip
-    if [ !$first_ip ]; then
+    if [ -z "$first_ip" ]; then
 	first_ip=$auto_first_ip
     fi
     auto_last_ip=`echo $server_ip|awk '{split($1,a,"."); print a[1]"."a[2]"."a[3]".100"}'`;
     
     echo -n "Enter last ip of range [$auto_last_ip]: "
     read last_ip
-    if [ !$last_ip ]; then
+    if [ -z "$last_ip" ]; then
 
 	last_ip=$auto_last_ip
     fi
     
     echo -n "Enter tftp server [$server_ip]: "
     read tftpd_ip
-    if [ !tftpd_ip ]; then
+    if [ -z "$tftpd_ip" ]; then
 	tftpd_ip=$server_ip
     fi
 
@@ -114,7 +122,7 @@ function prepareDhcp {
     rc=`cp $tftp_root/pxelinux.cfg/default "$tftp_root/pxelinux.cfg/default-$backup_ext"`;
 
     echo "Creating default PXE boot menu"
-cat > /tftpboot/pxelinux.cfg/default << EOF
+cat > $tftp_root/pxelinux.cfg/default << EOF
 default menu.c32
 prompt 0
 timeout 100
@@ -130,11 +138,11 @@ EOF
     rc=`cp $tftp_root/centos7-ks.cfg "$tftp_root/centos7-ks.cfg-$backup_ext"`;
     echo "Creating default kickstart file"
     
-cat > /tftpboot/centos7-ks.cfg << EOF
+cat > $tftp_root/centos7-ks.cfg << EOF
 auth --enableshadow --passalgo=sha512
 # cdrom
-url --url ftp://$server_ip
-# url --url http://$server_ip
+url --url ftp://$server_ip/centos/
+# url --url http://$server_ip/centos/
 # nfs --server $server_ip --dir $tftp_root/centos/
 # Use graphical install
 graphical
@@ -169,8 +177,7 @@ kexec-tools
 
 %end
 EOF
-    mkdir $tftp_boot/centos
-    ln -s /tftpboot/centos7-ks.cfg /tftpboot/centos/centos7-ks.cfg
+    mkdir -p $tftp_boot/centos
     backup_ext=`date +%m-%d-%Y" "%H:%M:%S`;
     rc=`cp /etc/dhcp/dhcpd.conf "/etc/dhcp/dhcpd.conf-$backup_ext"`;
 
@@ -235,6 +242,10 @@ EOF
     echo "Creating $tftp_root";
     mkdir -p $tftp_root
     chmod 777 $tftp_root
+    echo "Preparing PXE files"
+    mkdir -p $tftp_root/pxelinux.cfg
+    mkdir -p $tftp_root/netboot/centos/7/x86_64
+
     
     echo "Preparing directory";
     cp /usr/share/syslinux/{pxelinux.0,menu.c32,memdisk,mboot.c32,chain.c32} $tftp_root
@@ -243,10 +254,6 @@ EOF
 #    cp /usr/share/syslinux/mboot.c32 $tftp_root
 #    cp /usr/share/syslinux/chain.c32 $tftp_root
   
-    echo "Preparing PXE files"
-    mkdir $tftp_root/pxelinux.cfg
-    mkdir -p $tftp_root/netboot/centos/7/x86_64
-    
     echo "Downloading initrd.img"
     wget -q --directory-prefix=$tftp_root/netboot/centos/7/x86_64 -c ftp://ftp.ines.lug.ro/centos/7/os/x86_64/images/pxeboot/initrd.img
     echo "Downloading vmlinuz"
@@ -339,7 +346,7 @@ listen_ipv6=YES
 pam_service_name=vsftpd
 userlist_enable=YES
 tcp_wrappers=YES
-anon_root=/tftpboot/centos/
+anon_root=$tftp_root/
 EOF
 
     `systemctl enable vsftpd`
@@ -366,8 +373,8 @@ ServerAdmin root@localhost
     Require all denied
 </Directory>
 
-DocumentRoot "$tftp_root/centos"
-<Directory "$tftp_root/centos">
+DocumentRoot "$tftp_root"
+<Directory "$tftp_root">
     Options +Indexes +FollowSymLinks
     AllowOverride None
     Require all granted
@@ -474,13 +481,12 @@ function prepareNetwork {
 
 function prepareImage {
     echo "Preparing installation image."
-    echo ""
-    if [ !$isoFile ]; then 
+    if [[ -z "$isoFile" ]]; then 
 	echo -n "Donwload Centos 7 image from $isoUrl? (YN)[N]: "
 	read yn
 	if [[ $yn == "Y" || $yn == "y" ]]; then 
 	    wget -c --directory-prefix=/tmp $isoUrl
-	    `echo "$isoUrl"|awk '{n=split(\$1,a,"/");print a[n]}'`
+	    # `echo "$isoUrl"|awk '{n=split(\$1,a,"/");print a[n]}'`
 	    isoFile="/tmp/`echo "$isoUrl"|awk '{n=split(\$1,a,"/");print a[n]}'`"; 
 	fi
     fi
@@ -495,7 +501,19 @@ function prepareImage {
 	    umount /mnt
 	    echo "Preparing complete";
 	else
-	    echo "Mount failed. Errcode = $rc"; 
+	    echo "Mount failed. Errcode = $rc";
+            echo "Trying to unmount previous mount."
+            umount /mnt
+            rc=$?
+            case "$rc" in 
+              0 )
+                echo "Umount successfully. Retrying..."
+                prepareImage
+                ;;
+              * )
+                echo "Umount error. Skip operation. Errcode = $rc"
+              ;;
+            esac
 	fi
     fi
     
@@ -517,17 +535,30 @@ function prepareAll {
 };
 
 
+
+if [ $# -eq "0" ]; then
+    echo "
+    Use $0 script with parametrs:
+
+    --prepareImage [url|file]       Prepare image for PXE (Specify a URL or path to iso-image)
+      By default it be downloaded from $isoUrl
+    --prepareSoft                   Install necessery software
+    --prepareDhcp                   Configure DHCP server
+    --prepareTftp                   Configure TFTP server
+    --prepareFw                     Prepare firewall
+    --enableNfs                     Configure NFS server
+    --prepareFtpd                   Configure FTP server
+    --prepareHttpd                  Configure HTTP server
+    --prepareNetwork                Configure all (DHCP,TFTP,NFS,FTP,HTTP,Firewall)
+    ";
+    exit;
+fi
+
+
 while test $# -gt 0
 do
+    mkdir -p $tftp_root
     case $1 in
-        --isourl)
-            isoUrl=$2
-            shift
-            ;;
-        --isofile)
-    	    isoFile=$2
-    	    shift
-    	    ;;
         --prepareSoft)
             installSoft;
             shift
@@ -561,8 +592,20 @@ do
     	    shift
     	    ;;
     	--prepareImage)
-    	    prepareImage;
-    	    shift
+            checkrc=`echo \"$2\"|grep '\-\-' -c`
+            echo $checkrc
+             if [ $checkrc -eq "0" ]; then
+	      dtype=`echo \"$2\" | awk '{split($0,a,":"); print toupper(a[1])}'|sed 's/"//'`
+	      if [[ $dtype == "HTTP" || $dtype == "HTTPS" || $dtype == "FTP" ]]; then
+                isoUrl=$2
+              else
+                echo "$dtype" 
+                isoUrl="";
+                isoFile=$2
+              fi
+            fi
+            prepareImage; 
+            shift
     	    ;;
         *)
             echo >&2 "Invalid argument: $1"
@@ -571,21 +614,3 @@ do
     shift
 done
 
-
-if [ !$1 ]; then 
-    echo "
-    Use script with parametrs:
-
-    --prepareImage        Prepare image for PXE (use with --isourl or with --isofile)
-    --isourl <url>        Set url
-    --isofile <file>      Set iso file
-    --prepareSoft         Install necessery software
-    --prepareDhcp         Configure DHCP server
-    --prepareTftp         Configure TFTP server
-    --prepareFw           Prepare firewall
-    --enableNfs           Configure NFS server
-    --prepareFtpd         Configure FTP server
-    --prepareHttpd        Configure HTTP server
-    --prepareNetwork      Configure all (DHCP,TFTP,NFS,FTP,HTTP,Firewall)
-    ";
-fi
