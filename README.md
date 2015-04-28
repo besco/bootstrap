@@ -3,9 +3,9 @@ Setup a Kickstart/PXE/DHCP server for Centos
 
 # Options:
 
-## --prepareImage[=<file|url>]
+## --prepareImage[=path|url]
 Prepare image for PXE.  Use this option when necessary create a copy of the ISO image on hard disk to install Centos over the network. This option will copy the files from the ISO image to /tftpboot/centos<br> 
-The following two options point out where to get the ISO image:<br>
+By default iso-image will downloaded from: http://mirror.corbina.net/pub/Linux/centos/7/isos/x86_64/CentOS-7-x86_64-Minimal-1503-01.iso <br>
 
 ###Examples:
 ```
