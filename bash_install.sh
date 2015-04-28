@@ -26,6 +26,7 @@ function installSoft {
     	    echo "${nSoft[$index]} ready."
         fi
     done
+    return
 }
 
 function createDirs {
@@ -365,6 +366,7 @@ tcp_wrappers=YES
 anon_root=$tftp_root/
 EOF
 
+    chmod a-w $tftp_root
     `systemctl enable vsftpd`
     `systemctl restart vsftpd`
 }
@@ -513,7 +515,6 @@ function prepareImage {
 	rc=$?
 	if [ $rc -eq "0" ]; then
 	    echo "Mount succesful";
-	    mkdir $tftp_root/centos
 	    cp -fvr /mnt/* $tftp_root/centos/
 	    umount /mnt
 	    echo "Preparing complete";
@@ -567,13 +568,12 @@ if [ $# -eq "0" ]; then
     --prepareHttpd                  Configure HTTP server
     --prepareNetwork                Configure all (DHCP,TFTP,NFS,FTP,HTTP,Firewall)
     ";
-    exit;
+    #exit;
 fi
 
 
 while test $# -gt 0
 do
-    mkdir -p $tftp_root
     case $1 in
         --prepareSoft)
             installSoft;
@@ -604,7 +604,8 @@ do
             shift
             ;;
 	--prepareNetwork)
-    	    prepareNetwork;
+    	    echo "kuku"
+            prepareNetwork;
     	    shift
     	    ;;
     	--prepareImage)
