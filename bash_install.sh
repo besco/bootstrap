@@ -141,7 +141,13 @@ MENU TITLE Our PXE Menu
 
 LABEL centos7_x64
 MENU LABEL CentOS 7
+# NFS
+#KERNEL netboot/centos/7/x86_64/vmlinuz ks=nfs:$server_ip:/$tftp_root/centos7-ks.cfg
+# FTP
 KERNEL netboot/centos/7/x86_64/vmlinuz ks=ftp://$server_ip/centos7-ks.cfg
+# HTTP
+#KERNEL netboot/centos/7/x86_64/vmlinuz ks=http://$server_ip/centos7-ks.cfg
+
 APPEND console=tty0 console=ttyS0,9600N1 initrd=netboot/centos/7/x86_64/initrd.img ksdevice=link
 EOF
 
