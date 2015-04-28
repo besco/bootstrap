@@ -6,7 +6,7 @@ tftp_root="/tftpboot";
 isoFile="";
 
 
-function installSoft {
+function installSoft () {
     # The necessary software
     nSoft=("dhcp" "vsftpd" "httpd" "syslinux" "tftp" "tftp-server" "vim-enhanced" "wget" "nfs-utils" "net-tools");
 
@@ -26,7 +26,6 @@ function installSoft {
     	    echo "${nSoft[$index]} ready."
         fi
     done
-    return
 }
 
 function createDirs {
@@ -142,7 +141,7 @@ MENU TITLE Our PXE Menu
 
 LABEL centos7_x64
 MENU LABEL CentOS 7
-KERNEL netboot/centos/7/x86_64/vmlinuz ks=nfs:$server_ip:$tftp_root/centos7-ks.cfg
+KERNEL netboot/centos/7/x86_64/vmlinuz ks=ftp://$server_ip/centos7-ks.cfg
 APPEND console=tty0 console=ttyS0,9600N1 initrd=netboot/centos/7/x86_64/initrd.img ksdevice=link
 EOF
 
@@ -153,9 +152,9 @@ EOF
 cat > $tftp_root/centos7-ks.cfg << EOF
 auth --enableshadow --passalgo=sha512
 # cdrom
-url --url ftp://$server_ip/centos/
-# url --url http://$server_ip/centos/
-# nfs --server $server_ip --dir $tftp_root/centos/
+url --url ftp://$server_ip/centos
+# url --url http://$server_ip/centos
+# nfs --server $server_ip --dir $tftp_root/centos
 # Use graphical install
 graphical
 # Run the Setup Agent on first boot
@@ -304,9 +303,9 @@ function enableNfs {
     echo "Enabling NFS";
     installSoft;
     rc=`cat /etc/exports|grep -w $tftp_root -c`
-    if [ $rc -ne "0" ]; then 
+    if [ $rc -eq "0" ]; then 
 	echo "Add access to centos via nfs"
-	echo "/$tftp_root		*(ro,sync,no_root_squash,no_all_squash)" >>/etc/exports
+	echo "$tftp_root		*(ro,sync,no_root_squash,no_all_squash)" >>/etc/exports
     else
 	echo "NFS dir already configured"
     fi
@@ -503,10 +502,8 @@ function prepareImage {
     if [ ! -z "$filePath" ]; then
       dtype=`echo \"$filePath\" | awk '{split($0,a,":"); print toupper(a[1])}'|sed 's/"//'`
       if [[ $dtype == "HTTP" || $dtype == "HTTPS" || $dtype == "FTP" ]]; then
-        echo "url!"
         isoUrl=$filePath
       else
-        echo "Path!"
 	isoFile=$filePath
       fi
     fi
@@ -567,7 +564,7 @@ if [ $# -eq "0" ]; then
     echo "
     Use $0 script with parametrs:
 
-    --prepareImage [url|file]       Prepare image for PXE (Specify a URL or path to iso-image)
+    --prepareImage=[url|file]       Prepare image for PXE (Specify a URL or path to iso-image)
       By default it be downloaded from $isoUrl
     --prepareSoft                   Install necessery software
     --prepareDhcp                   Configure DHCP server
@@ -588,40 +585,31 @@ do
     case $param1 in
         --prepareSoft)
             installSoft;
-            shift
-            ;;
-        --prepareDhcp)
-            prepareDhcp;
-            shift
-            ;;
-        --prepareTftp)
-            prepareTftp
-            shift
-            ;;
-        --prepareFw)
-            prepareFw;
-            shift
-            ;;
-        --prepareNfs)
-            prepareNfs;
-            shift
-            ;;
-        --prepareFtpd)
-            prepareTf3tp
-            shift
-            ;;
-        --prepareHttpd)
-            prepareHttpd;
-            shift
             ;;
         --prepareNetwork)
             prepareNetwork;
-            shift
+            ;;
+        --prepareDhcp)
+            prepareDhcp;
+            ;;
+        --prepareTftp)
+            prepareTftp
+            ;;
+        --prepareFw)
+            prepareFw;
+            ;;
+        --prepareNfs)
+            prepareNfs;
+            ;;
+        --prepareFtpd)
+            prepareTf3tp
+            ;;
+        --prepareHttpd)
+            prepareHttpd;
             ;;
         --prepareImage)
             filePath=$param2;
             prepareImage;
-            shift
             ;;
         *)
             echo >&2 "Invalid argument: $1"
