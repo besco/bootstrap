@@ -21,7 +21,7 @@ Generate configuration for DHCP, kickstart and boot menu (/etc/dhcp/dhcpd.conf, 
 Generate configuration for TFTP server
 ##--prepareFw
 Open the necessary ports in the firewall
-##--enableNfs
+##--prepareNfs
 Generate configuration for NFS server
 ##--prepareFtpd
 Generate configuration for FTP server
