@@ -582,7 +582,7 @@ if [ $# -eq "0" ]; then
     --prepareHttpd                  Configure HTTP server
     --prepareNetwork                Configure all (DHCP,TFTP,NFS,FTP,HTTP,Firewall)
     ";
-    #exit;
+    exit;
 fi
 
 while test $# -gt 0
